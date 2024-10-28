@@ -1,0 +1,16 @@
+{
+  "name": "chat-backend",
+  "version": "0.0.1",
+  "description": "Backend for a simple chat app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Rosalina",
+  "license": "GPL-2.0",
+  "devDependencies": {
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1"
+  }
+}

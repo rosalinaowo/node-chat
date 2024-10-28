@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <title>Test frontend</title>
+        <style>
+            body {
+                background-color: #151515;
+                margin: 0;
+                padding-bottom: 3rem;
+                font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                color: white;
+            }
+            
+            #footer {
+                background: rgba(0, 0, 0, 0.15);
+                padding: 0.25rem;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            #form > input {
+            	border: none;
+            	padding: 0 1rem;
+            	flex-grow: 1;
+            	border-radius: 2rem;
+            	margin: 0.25rem;
+                height: 2em;
+            }
+            
+            #form > input:focus {
+            	outline: none;
+            }
+            
+            #form {
+                display: flex;
+            }
+
+            #form > button {
+            	background: #333;
+            	border: none;
+            	padding: 0 1rem;
+            	margin: 0.25rem;
+            	border-radius: 3px;
+            	outline: none;
+            	color: #fff;
+            }
+            
+            #messages {
+            	list-style-type: none;
+            	margin: 0;
+            	padding: 0;
+            }
+            
+            #messages > li {
+            	padding: 0.5rem 1rem;
+            }
+        </style>
+  </head>
+    <body>
+        <ul id="messages"></ul>
+        <div id="footer">
+            <div style="color: white;">UUID: <span id="uuid"></span></div>
+            <br>
+            <div id="form">
+                <input id="input" autocomplete="off" placeholder="Message..." />
+                <input id="recipientUuid" autocomplete="off" placeholder="Recipient UUID" />
+                <button onclick="sendMsg(input.value, recipientUuid.value)">Send</button>
+            </div>
+        </div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            function generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            function sendMsg(message, recipientUuid) {
+                socket.emit('message', {
+                    uuid: uuid,
+                    recipientUuid: recipientUuid,
+                    firstName: uuid,
+                    lastName: "",
+                    time: Date.now() / 1000,
+                    text: message
+                });
+            }
+
+            const socket = io();
+            const uuid = generateUUID();
+
+            document.getElementById('uuid').innerHTML = uuid;
+
+            socket.emit('register', uuid);
+
+            socket.on('message', (msg) => {
+                console.dir(msg);
+                document.getElementById('messages').innerHTML += `<li><span style="color: gray">${Intl.DateTimeFormat('en-GB', { dateStyle: "short", timeStyle: "short" }).format(msg.time)}</span> <span style="color: cyan;">${msg.firstName} ${msg.lastName}</span>: <span>${msg.text}</span></li><hr>`;
+            });
+
+            socket.on('error', (error) => {
+                console.error(error.message);
+                alert(`Error: ${error.message}`);
+            });
+        </script>
+    </body>
+</html>
