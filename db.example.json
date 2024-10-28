@@ -1,0 +1,29 @@
+{
+    "users": [
+        {
+            "uuid": "17bb9659-65bf-43d3-b9af-7df8fdfbf80f",
+            "firstName": "John",
+            "lastName": "Doe",
+            "lastSeen": 1730143699,
+            "pfpUrl": "https://art.ngfiles.com/images/3046000/3046160_digbystuff_128x128-minecraft-pig.png",
+            "contacts": [ "ef77bb41-b8d4-44e4-95d9-9b90bef5f52e" ]
+        },
+        {
+            "uuid": "ef77bb41-b8d4-44e4-95d9-9b90bef5f52e",
+            "firstName": "Elon",
+            "lastName": "Maschio",
+            "lastSeen": 1730123699,
+            "pfpUrl": "https://assets.bundesliga.com/player/dfl-obj-j01mcy-dfl-clu-00000t-dfl-sea-0001k7-circle.png",
+            "contacts": [ "17bb9659-65bf-43d3-b9af-7df8fdfbf80f" ]
+        }
+    ],
+    "groupChats": [
+        {
+            "uuid": "9e5ddee9-d42d-444d-8ccd-ac4d6a6ab0f9",
+            "creator": "ef77bb41-b8d4-44e4-95d9-9b90bef5f52e",
+            "description": "Da best in da west",
+            "iconUrl": "https://avatars.cloudflare.steamstatic.com/3cd4a26a53e6ab554b65ab8e3ea378810f4000dd_full.jpg",
+            "members": [ "ef77bb41-b8d4-44e4-95d9-9b90bef5f52e", "17bb9659-65bf-43d3-b9af-7df8fdfbf80f" ]
+        }
+    ]
+}
