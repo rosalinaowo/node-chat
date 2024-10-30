@@ -40,7 +40,7 @@
                 display: flex;
             }
 
-            #form > button {
+            button {
             	background: #333;
             	border: none;
             	padding: 0 1rem;
@@ -59,12 +59,46 @@
             #messages > li {
             	padding: 0.5rem 1rem;
             }
+
+            #register {
+                display: none;
+                position: fixed;
+                flex-direction: column;
+                align-items: center;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 5px;
+                background-color: white;
+                color: black;
+            }
         </style>
   </head>
     <body>
         <ul id="messages"></ul>
+        <div id="register">
+            <div>
+                <input id="inputFirstName" placeholder="First name" />
+                <input id="inputLastName" placeholder="Last name" />
+                <input id="inputPfpUrl" placeholder="Profile picture URL" />
+            </div>
+            <div>
+                <button onclick="closeRegistrationWindow()">Cancel</button>
+                <button onclick="register()">Register!</button>
+            </div>
+        </div>
         <div id="footer">
-            <div style="color: white;">UUID: <span id="uuid"></span></div>
+            <div style="display: flex; flex-direction: row;">
+                <img id="pfp" style="max-width: 64px; border-radius: 50%; margin-right: 10px;">
+                <div style="margin-right: 10px;">
+                    <div id="fullName"></div>
+                    <div>UUID: <input id="uuid" autocomplete="off" style="width: 250px;"></input></div>
+                </div>
+                <div>
+                    <button onclick="registerDiv.style.display = 'flex'">Register</button><br>
+                    <button onclick="login()">Login</button>
+                </div>
+            </div>
             <br>
             <div id="form">
                 <input id="input" autocomplete="off" placeholder="Message..." />
@@ -74,6 +108,17 @@
         </div>
         <script src="/socket.io/socket.io.js"></script>
         <script>
+            const registerDiv = document.getElementById('register');
+            const fullNameSpan = document.getElementById('fullName');
+            const uuidInput = document.getElementById('uuid');
+            //const uuid = generateUUID();
+            var socket;
+            var uuid = '17bb9659-65bf-43d3-b9af-7df8fdfbf80f';
+            var user;
+            var users = [];
+
+            uuidInput.value = uuid;
+
             function generateUUID() {
                 return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                     const r = Math.random() * 16 | 0;
@@ -82,33 +127,121 @@
                 });
             }
 
+            function closeRegistrationWindow() {
+                inputFirstName.value = '';
+                inputLastName.value = '';
+                inputPfpUrl.value ='';
+                registerDiv.style.display = 'none';
+            }
+
+            function updateUserUi(newUser) {
+                user = newUser;
+                uuidInput.value = user.uuid;
+                fullNameSpan.innerHTML = `${user.firstName} ${user.lastName}`;
+                document.getElementById('pfp').src = user.pfpUrl;
+            }
+
             function sendMsg(message, recipientUuid) {
                 socket.emit('message', {
-                    uuid: uuid,
+                    senderUuid: user.uuid,
                     recipientUuid: recipientUuid,
-                    firstName: uuid,
-                    lastName: "",
-                    time: Date.now() / 1000,
+                    time: Date.now(),
                     text: message
                 });
             }
 
-            const socket = io();
-            const uuid = generateUUID();
+            function login() {
+                socket.disconnect();
+                uuid = uuidInput.value;
+                createSocket();
+            }
 
-            document.getElementById('uuid').innerHTML = uuid;
+            function register() {
+                socket.emit('register',
+                    {
+                        uuid: generateUUID(),
+                        firstName: document.getElementById('inputFirstName').value,
+                        lastName: document.getElementById('inputLastName').value,
+                        lastSeen: undefined,
+                        pfpUrl: document.getElementById('inputPfpUrl').value,
+                        contacts: []
+                    }
+                );
+            }
 
-            socket.emit('register', uuid);
+            function createSocket() {
+                socket = io();
 
-            socket.on('message', (msg) => {
-                console.dir(msg);
-                document.getElementById('messages').innerHTML += `<li><span style="color: gray">${Intl.DateTimeFormat('en-GB', { dateStyle: "short", timeStyle: "short" }).format(msg.time)}</span> <span style="color: cyan;">${msg.firstName} ${msg.lastName}</span>: <span>${msg.text}</span></li><hr>`;
-            });
+                socket.on('connect', () => {
+                    fullNameSpan.innerHTML = 'Connected to the server';
+                    socket.emit('login', uuid);
+                });
 
-            socket.on('error', (error) => {
-                console.error(error.message);
-                alert(`Error: ${error.message}`);
-            });
+                socket.on('connect_error', (err) => {
+                    if (err.description === 0) {
+                        fullNameSpan.innerHTML = `Couldn't connect to the server. Retrying...`;
+                    }
+                    console.error('Error:', err);
+                });
+
+                socket.on('disconnect', (reason, details) => {
+                    fullNameSpan.innerHTML = `Disconnected from server. Reason: ${reason}`;
+                });
+            
+                socket.on('loginStatus', (s) => {
+                    if (s.status === 'success') {
+                        updateUserUi(s.profile);
+                    } else {
+                        alert(`Error: ${s.description}`);
+                    }
+                });
+
+                socket.on('registrationStatus', (s) => {
+                    if (s.status === 'success') {
+                        updateUserUi(s.user);
+                        closeRegistrationWindow();
+                        login();
+                    } else {
+                        alert('Error: Invalid data entered');
+                    }
+                });
+
+                socket.on('message', async (msg) => {
+                    let sender = users.find((u) => u.uuid === msg.senderUuid);
+                    if (!sender) {
+                        console.log('User not found, requesting...');
+                        try {
+                            sender = await getUser(msg.senderUuid);
+                            users.push(sender);
+                        } catch (error) {
+                            console.error(error.message);
+                            sender = { firstName: 'Unknown', lastName: '' };
+                        }
+                    }
+                    document.getElementById('messages').innerHTML +=`<li><span style="color: gray">${new Date(msg.time).toLocaleString('en-GB')}</span> <span style="color: cyan;">${sender.firstName} ${sender.lastName}</span>: <span>${msg.text}</span></li><hr>`;
+                });
+
+                socket.on('sendMessageStatus', (error) => {
+                    console.error(error.description);
+                    alert(`Error: ${error.description}`);
+                });
+            }
+
+            async function getUser(uuid) {
+                return new Promise((resolve, reject) => {
+                    socket.emit('getUser', uuid);
+
+                    socket.once('getUserResult', (result) => {
+                        if (result) {
+                            resolve(result);
+                        } else {
+                            reject(new Error('User not found'));
+                        }
+                    });
+                });
+            }
+
+            createSocket();
         </script>
     </body>
 </html>

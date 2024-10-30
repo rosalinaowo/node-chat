@@ -1,5 +1,16 @@
 const fs = require('fs');
 const express = require('express');
+const Joi = require('joi');
+
+// Schemas
+const userSchema = Joi.object({
+    uuid: Joi.string().guid({ version: 'uuidv4' }).required(),
+    firstName: Joi.string().min(1).required(),
+    lastName: Joi.string().min(1).required(),
+    lastSeen: Joi.date().timestamp('javascript'),
+    pfpUrl: Joi.string(),
+    contacts: Joi.array().items(Joi.string().guid({ version: 'uuidv4' })).required()
+});
 
 const PORT = 3001;
 const app = express();
@@ -35,16 +46,57 @@ app.post('/get/groupChat', (req, res) => {
 
 app.post('/add/user', (req, res) => {
     const newUser = req.body;
-    db.users.push(newUser);
-    saveData();
-    res.json(newUser);
+    const validationResult = userSchema.validate(newUser);
+    if (validationResult.error) {
+        res.json({ "status": "error", "description": "Invalid user provided" });
+    } else {
+        db.users.push(newUser);
+        saveData();
+        res.json({ "status": "success", "user": newUser });
+    }
 });
 
 app.post('/add/groupChat', (req, res) => {
     const newGroupChat = req.body;
     db.groupChats.push(newGroupChat);
+
     saveData();
     res.json(newGroupChat);
+});
+
+app.put('/edit/user', (req, res) => {
+    if (req.body.uuid) {
+        const uuid = req.body.uuid;
+        const index = db.users.findIndex((user) => user.uuid === uuid);
+        if (index >= 0) {
+            const updatedUser = { ...db.users[index], ...req.body }
+            db.users[index] = updatedUser;
+
+            saveData();
+            res.json({ "status": "success", "user": updatedUser });
+        } else {
+            res.json({ "status": "error", "description": `No user found with UUID: ${uuid}` });
+        }
+    } else {
+        res.json({ "status": "error", "description": "UUID not provided" });
+    }
+});
+
+app.delete('/delete/user', (req, res) => {
+    if (req.body.uuid) {
+        const uuid = req.body.uuid;
+        const index = db.users.findIndex((user) => user.uuid === uuid);
+        if (index >= 0) {
+            db.users.splice(index, 1);
+            
+            saveData();
+            res.json({ "status": "success" });
+        } else {
+            res.json({ "status": "error", "description": `No user found with UUID: ${uuid}` });
+        }
+    } else {
+        res.json({ "status": "error", "description": "UUID not provided" });
+    }
 });
 
 app.listen(PORT, () => {
